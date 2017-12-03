@@ -1,4 +1,5 @@
 # coding:utf-8
+# python3 中无需调用division
 from __future__ import division
 from numpy import *
 import numpy as np
