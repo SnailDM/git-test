@@ -14,6 +14,14 @@ def readlabel(path,label_name, id_name):
         data.append(data_concat.loc[i,label_name])
     return (data)
 
+#将标签列表转换为二维数组
+def format_data(data):
+    formated_data = []
+    for ech in data:
+        ech_line = ech.split('/')
+        formated_data.append(ech_line)
+    return formated_data
+
 #建立关于标签的字典
 def dic(readpath, label_name):
     label_data = pd.read_csv(readpath)
@@ -41,18 +49,35 @@ def inimatrix(matrix, dic, length):
     return matrix
 
 #计算标签与标签之间的共现次数
-def countmatirx(matrix, dic, mlength, keylis):
-    for i in range(1, mlength):
-        for j in range(1, mlength):
-            count = 0
-            for k in keylis:
-                ech = str(k).split('/')
-
-                if str(matrix[0][i]) in ech and str(matrix[j][0]) in ech and str(matrix[0][i]) != str(matrix[j][0]):
-                    count = count+1
+def countmatirx(matrix, formated_data):
+    keywordlist=matrix[0][1:]  #列出所有标签
+    appeardict={}  #各个标签为键，出现在哪些文本（将文本按顺序排列，出现的序号添加到列表中）为值，构造字典
+    for w in keywordlist:
+        appearlist=[]
+        i=0
+        for each_line in formated_data:
+            print(each_line)
+            if w in each_line:
+                appearlist.append(i)
+            i +=1
+        appeardict[w]=appearlist
+    print(appeardict)
+    for row in range(1, len(matrix)):
+        # 遍历矩阵行标签
+        for col in range(1, len(matrix)):
+                # 遍历矩阵列标签
+                # 实际上就是为了跳过matrix中下标为[0][0]的元素，因为[0][0]为空
+            if col >= row:
+                #仅计算上半个矩阵
+                if matrix[0][row] == matrix[col][0]:
+                    # 如果取出的行标签和列标签相同，则其对应的共现次数为0，即矩阵对角线为0
+                    matrix[col][row] = int(0)
                 else:
-                    continue
-            matrix[i][j] = int(count)
+                    counter = len(set(appeardict[matrix[0][row]])&set(appeardict[matrix[col][0]]))
+
+                    matrix[col][row] = int(counter)
+            else:
+                matrix[col][row]=matrix[row][col]
     return matrix
 
 #取出标签之间的共现值用于PMI计算
@@ -66,11 +91,12 @@ def main():
     co_calcul_path = r'E:\gitfile\test1.xlsx'   #需要计算PMI值的文档
     co_result_path = r'E:\gitfile\test_result.xlsx' #存放计算结果
     label_list = readlabel(readpath, label_name='label', id_name='id')   #将每一份文本的标签隔开，转换成列表
+    formated_data = format_data(label_list)
     label_dict = dic(readpath, label_name='label')   #建立关于标签的字典
     length = len(label_dict)+1
     matrix = buildmatrix(length, length)    #构建空矩阵用于存放标签的共现矩阵
     matrix = inimatrix(matrix, label_dict, length)  #将标签分行列构建初始共现矩阵用于存放计算结果
-    matrix = countmatirx(matrix, label_dict, length, label_list)    #计算标签与标签之间的共现次数
+    matrix = countmatirx(matrix, formated_data)    #计算标签与标签之间的共现次数
     concurrence_data = pd.DataFrame(matrix, columns=matrix[0], index=matrix[0])
     concurrence_data = concurrence_data.drop(['label'], axis=0)
     concurrence_data = concurrence_data.drop(['label'], axis=1)
